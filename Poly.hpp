@@ -1,5 +1,7 @@
 #include <bits/stdc++.h>
 #include <cmath>
+#include <libff/algebra/field_utils/bigint.hpp>
+#include <libff/algebra/fields/prime_base/fp.hpp>
 //#include <gmpxx.h> // compile with -lgmpxx -lgmp
 
 #pragma once
@@ -7,12 +9,48 @@
 using namespace std;
 
 typedef complex<double> cd;
+typedef libff::Fp_model<
 
 class Poly {
-	vector<double> agreed_x;
+	const mp_size_t limbs = 4;
+	const libff:bigint<limbs> my_prime(524287);
+	typedef libff::Fp_model<limbs, my_prime> Fp; 
+
+	vector<Fp> agreed_x;
+
 public:
-	Poly(vector<double> x) : agreed_x(x) {};
-	vector<double> interpolate(vector<int> y) {
+	Poly() {};
+
+	/*
+	 * Encode a message into a polynomial with lagrange interpolation
+	 */
+	vector<Fp> encode_message(string m, int parity) {
+		int k = m.length();
+		int n = k + parity;
+		Fp::num_bits = my_prime.num_bits();
+
+		Fp element = Fp::zero();
+		Fp step = Fp::arithmetic_generator();
+
+		vector<Fp> x(n);
+		for (int i = 0; i < n; ++i) {
+			x[i] = element;
+			element += step;
+		}
+		agreed_x = x;
+			
+		// Using each character in the message as m_i
+		// m_i is just a symbol, could be whatever is defined
+		vector<Fp> values(k);
+		for (int i = 0; i < k; ++i) {
+			values[i] = Fp y(static_cast<int>(m[i]));
+		}
+
+		Vector<Fp> polynomial = interpolate(values);
+		return polynomial;
+	}
+
+	vector<Fp> interpolate(vector<Fp> y) {
 		vector<tuple<int, int>> points;
 		for (size_t i = 0; i < agreed_x.size(); ++i) {
 			points.push_back(make_tuple(agreed_x[i], y[i]));
@@ -21,12 +59,17 @@ public:
 		return lagrange_interpolation(points);
 	}
 
-	double evaluate_polynomial(vector<double> p, double x) {
-		double degree = p.size() - 1;
+	/*
+	 * Evaluate a polynomial at a point
+	 */
+	Fp evaluate_polynomial(vector<Fp> p, Fp x) {
+		if (p.empty()) {
+			return Fp::zero();
+		}
 		
-		double value = 0.0;
-		for (int i = 0; i < p.size(); i++) {
-			value += p[i] * pow(x, degree - i);
+		Fp value = p[0];
+		for (size_t i = 1; i < p.size(); ++i) {
+			value = (value * x) + p[i];
 		}
 
 		return value;
