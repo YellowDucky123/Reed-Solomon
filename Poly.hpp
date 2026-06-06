@@ -12,13 +12,13 @@ class Poly {
 	vector<double> agreed_x;
 public:
 	Poly(vector<double> x) : agreed_x(x) {};
-	void interpolate(vector<int> y) {
+	vector<double> interpolate(vector<int> y) {
 		vector<tuple<int, int>> points;
 		for (size_t i = 0; i < agreed_x.size(); ++i) {
 			points.push_back(make_tuple(agreed_x[i], y[i]));
 		}
 
-
+		return lagrange_interpolation(points);
 	}
 
 	double evaluate_polynomial(vector<double> p, double x) {
@@ -37,21 +37,24 @@ public:
 	 * takes the index of the agreed_x, not the value of the x
 	 */ 
 	vector<double> polyAtPoint(int idx) {
-		vector<vector<double>> polynomials;
+		vector<vector<double>> polynomial;
 		for (int i = 0; i < agreed_x.size(); ++i) {
 			if (i == idx) continue;
 
-			vector<double> zero_p = {1.0, agreed_x[i]}
+			vector<double> zero_p = {1.0, -agreed_x[i]}
+			polynomial.push_back(zero_p);
 		}
 		
-		vector<double> p = polynomials[0];
-		for (int i = 1; i < polynomials.size(); ++i) {
-			p = polynomial_multiplication(p_i, polynomials[i]);
+		if (polynomial.empty()) return {1.0};
+
+		vector<double> p = polynomial[0];
+		for (size_t i = 1; i < polynomial.size(); ++i) {
+			p = multiply_double_polys(p, polynomials[i]);
 		}
 
-		double value_at_point = evaluate_polynomial(p_i, agreed_x[idx]);
-		for (double& p_i : p) {
-			p_i /= value_at_point;
+		double value_at_point = evaluate_polynomial(p, agreed_x[idx]);
+		for (double& coeff : p) {
+			coeff /= value_at_point;
 		}
 
 		return p;
@@ -60,7 +63,7 @@ public:
 	/* 
 	 * Interpolate the polynomial with lagrange interpolation
 	 */
-	vector<int> lagrange_interpolation(vector<tuple<int, int>> points) {
+	vector<double> lagrange_interpolation(vector<tuple<int, int>> points) {
 		int n = agreed_x.size();
 		vector<vector<double>> polynomials(n);
 
@@ -68,18 +71,38 @@ public:
 			polynomials[i] = polyAtPoint(i);
 		}
 
+		// Each polynomial for each point gets scalared by their y values in those points
 		for (int i = 0; i < n; ++i) {
 			vector<double>& p_i = polynomials[i]; 
+			double y_val = get<1>(points[i]);
 			for (double& p_ij : p_i) {
-				p_ij *= points[i][1];
+				p_ij *= y_val;
 			}
 		}
 
-		vector<double> interpolated;
+		int interpolated_degree = polynomials[0].size();
+		vector<double> interpolated(interpolated_degree, 0.0);
 		for (int i = 0; i < n; ++i) {
-			
+			for (int j = 0; j < interpolated_degree; ++j) {
+				interpolated[j] += polynomials[i][j];
+			}
 		}
+
+		return interpolated;
 	}
+
+	/*
+	 * Helper to multiply two double polynomials directly for Lagrange
+	 */ 
+    vector<double> multiply_double_polys(const vector<double>& p1, const vector<double>& p2) {
+        vector<double> result(p1.size() + p2.size() - 1, 0.0);
+        for (size_t i = 0; i < p1.size(); ++i) {
+            for (size_t j = 0; j < p2.size(); ++j) {
+                result[i + j] += p1[i] * p2[j];
+            }
+        }
+        return result;
+    }
 
 	/* 
 	 * Fast Fourier Transform
