@@ -5,11 +5,30 @@
 
 class Reed_solomon {
 public:
-static vector<double> encode(string m, int parity) {
+static vector<Fp> encode(string m, int parity) {
+	int k = m.length();
+	int n = k + parity;
+	
 	Poly poly = Poly();
-	vector<Fp> encoded = poly.encode_message(m, parity);
+	vector<Fp> output(m.length() + parity);
 
+	vector<Fp> agreed_x(n);
+	for (int i = 0; i < n; ++i) {
+		agreed_x[i] = element;
+		element += step;
+	}
 
-	Fp value = poly.evaluate_polynomial(encoded, );
+	vector<Fp> encoded = poly.encode_message(m, agreed_x);
+
+	// Get the values associated at each x to be sent out as the codeword
+	for (int i = 0; i < n; ++i) {
+		output[i] = poly.evalute_polynomial(encoded, agreed_x[i]);	
+	}
+
+	return output;
+}
+
+static string decode(vector<Fp> codeword) {
+
 }
 }

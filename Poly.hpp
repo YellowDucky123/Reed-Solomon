@@ -9,14 +9,11 @@
 using namespace std;
 
 typedef complex<double> cd;
-typedef libff::Fp_model<
 
 class Poly {
 	const mp_size_t limbs = 4;
 	const libff:bigint<limbs> my_prime(524287);
 	typedef libff::Fp_model<limbs, my_prime> Fp; 
-
-	vector<Fp> agreed_x;
 
 public:
 	Poly() {};
@@ -24,21 +21,10 @@ public:
 	/*
 	 * Encode a message into a polynomial with lagrange interpolation
 	 */
-	vector<Fp> encode_message(string m, int parity) {
+	vector<Fp> encode_message(string m, vector<Fp>& agreed_x) {
 		int k = m.length();
-		int n = k + parity;
 		Fp::num_bits = my_prime.num_bits();
-
-		Fp element = Fp::zero();
-		Fp step = Fp::arithmetic_generator();
-
-		vector<Fp> x(n);
-		for (int i = 0; i < n; ++i) {
-			x[i] = element;
-			element += step;
-		}
-		agreed_x = x;
-			
+	
 		// Using each character in the message as m_i
 		// m_i is just a symbol, could be whatever is defined
 		vector<Fp> values(k);
@@ -46,17 +32,19 @@ public:
 			values[i] = Fp y(static_cast<int>(m[i]));
 		}
 
-		Vector<Fp> polynomial = interpolate(values);
+		Vector<Fp> polynomial = interpolate(values, k, agreed_x);
 		return polynomial;
 	}
 
-	vector<Fp> interpolate(vector<Fp> y) {
+
+	// Only interpolate on the positions of the message not on parity
+	vector<Fp> interpolate(vector<Fp> y, int& k, vector<Fp>& agreed_x) {
 		vector<tuple<int, int>> points;
-		for (size_t i = 0; i < agreed_x.size(); ++i) {
+		for (size_t i = 0; i < k; ++i) {
 			points.push_back(make_tuple(agreed_x[i], y[i]));
 		}
 
-		return lagrange_interpolation(points);
+		return lagrange_interpolation(points, agreed_x);
 	}
 
 	/*
@@ -79,7 +67,7 @@ public:
 	 * Gets the polynomial where its 1 at point x and 0 on all others
 	 * takes the index of the agreed_x, not the value of the x
 	 */ 
-	vector<double> polyAtPoint(int idx) {
+	vector<double> polyAtPoint(int idx, vector<Fp>& agreed_x) {
 		vector<vector<double>> polynomial;
 		for (int i = 0; i < agreed_x.size(); ++i) {
 			if (i == idx) continue;
@@ -106,12 +94,12 @@ public:
 	/* 
 	 * Interpolate the polynomial with lagrange interpolation
 	 */
-	vector<double> lagrange_interpolation(vector<tuple<int, int>> points) {
+	vector<double> lagrange_interpolation(vector<tuple<int, int>> points, vector<Fp>& agreed_x) {
 		int n = agreed_x.size();
 		vector<vector<double>> polynomials(n);
 
 		for (int i = 0; i < n; ++i) {
-			polynomials[i] = polyAtPoint(i);
+			polynomials[i] = polyAtPoint(i, agreed_x);
 		}
 
 		// Each polynomial for each point gets scalared by their y values in those points
