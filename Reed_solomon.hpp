@@ -4,6 +4,10 @@
 #include "Poly.hpp"
 
 class Reed_solomon {
+	const mp_size_t limbs = 4;
+	const libff:bigint<limbs> my_prime(524287);
+	typedef libff::Fp_model<limbs, my_prime> Fp;
+
 public:
 static vector<Fp> encode(string m, int parity) {
 	int k = m.length();
